@@ -1,3 +1,8 @@
+Move profiles-example.clj to profiles.clj
+Add your accounts to the account list
+Add your google maps key
+
+
 Running the clojure codebase
 *  `cd cljpokego`
 *  `lein protobuf`
