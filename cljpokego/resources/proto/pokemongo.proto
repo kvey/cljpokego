@@ -1,0 +1,244 @@
+option java_package = "com.pokemongo";
+option java_outer_classname = "PokemongoProtos";
+
+package Pokemon;
+
+message RequestEnvelop {
+  required int32 unknown1 = 1;
+  optional int64 rpc_id = 3;
+  repeated Requests requests = 4;
+  optional Unknown6 unknown6 = 6;
+  optional fixed64 latitude = 7;
+  optional fixed64 longitude = 8;
+  optional fixed64 altitude = 9;
+  optional AuthInfo auth = 10;
+  optional UnknownAuth unknown11 = 11;
+  optional int64 unknown12 = 12;
+
+  message Requests {
+    required int32 type = 1;
+    optional bytes message = 2;
+  }
+
+  message MessageSingleString {
+    required bytes bytes = 1;
+  }
+
+  message MessageSingleInt {
+    required int64 f1 = 1;
+  }
+
+  message MessageTwoInts {
+    required int64 f1 = 1;
+    required int64 f5 = 5;
+  }
+
+  message MessageQuad {
+    required bytes f1 = 1;
+    required bytes f2 = 2;
+    required fixed64 lat = 3;
+    required fixed64 long = 4;
+  }
+
+  message GetMapObjectsMessage {
+    repeated uint64 cell_id = 1 [packed=true];
+    repeated int64 since_timestamp_ms = 2 [packed=true];
+    required fixed64 latitude = 3;
+    required fixed64 longitude = 4;   
+  }
+
+  message Wat {
+    repeated int64 lols = 134217728;
+  }
+
+  message Unknown3 {
+    required bytes unknown4 = 1;
+    optional bytes unknown2 = 2;
+    optional fixed64 lat = 3;
+    optional fixed64 long = 4;
+  }
+
+  message Unknown6 {
+    required int32 unknown1 = 1;
+    required Unknown2 unknown2 = 2;
+
+    message Unknown2 {
+      required bytes unknown1 = 1;
+    }
+
+  }
+  message AuthInfo {
+    required string provider = 1;
+    required JWT token = 2;
+
+    message JWT {
+      required string contents = 1;
+      required int32 unknown13  = 2;
+    }
+  }
+}
+
+
+message UnknownAuth {
+  optional bytes unknown71 = 1;
+  optional int64 unknown72 = 2;
+  optional bytes unknown73 = 3;
+}
+
+message ResponseEnvelop {
+  required int32 unknown1 = 1;
+  optional int64 unknown2 = 2;
+  optional string api_url = 3;
+  optional Unknown6 unknown6 = 6;
+  optional UnknownAuth unknown7 = 7;
+  repeated bytes payload = 100;
+  optional string error = 101;
+
+  message Unknown6 {
+    required int32 unknown1 = 1;
+    required Unknown2 unknown2 = 2;
+
+    message Unknown2 {
+      required bytes unknown1 = 1;
+    }
+  }
+
+  message HeartbeatPayload {
+    repeated ClientMapCell cells = 1;
+  }
+
+  message ClientMapCell {
+    required uint64 s2_cell_id = 1;
+    required int64 as_of_time_ms = 2;
+    repeated PokemonFortProto fort = 3;
+    repeated ClientSpawnPointProto spawn_point = 4;
+    repeated WildPokemonProto wild_pokemon = 5;
+    optional string deleted_object = 6;
+    optional bool is_truncated_list = 7;
+    repeated PokemonSummaryFortProto fort_summary = 8;
+    repeated ClientSpawnPointProto decimated_spawn_point = 9;
+    repeated MapPokemonProto map_pokemon = 10;
+    repeated NearbyPokemonProto nearby_pokemon = 11;
+  }
+
+
+  message WildPokemon {
+    required string unique_id = 1;
+    required string pokemon_id = 2;
+    // int64 three = 3;
+    // float four = 4;
+    // int32 five = 5;
+    // unknown six = 6;
+    repeated NearbyPokemonProto pokemon = 11;
+  }
+
+
+  message MapPokemonProto {
+    required string spawn_id = 1;
+    optional uint64 encouter_id = 2;
+    required int32 pokedex_type_id = 3;
+    required int64 despawn_time_ms = 4;
+    required double latitude = 5;
+    required double longitude = 6;
+  }
+
+  message PokemonFortProto {
+    optional string fort_id = 1;
+    optional int64 last_modified_ms = 2;
+    optional double latitude = 3;
+    optional double longitude = 4;
+    optional int32 team = 5;
+    optional int32 guard_pokemon_id = 6;
+    optional int32 guard_pokemon_level = 7;
+    optional bool enabled = 8;
+    // ENUM.Holoholo.Rpc.FortType FortType = 9;
+    optional int32 fort_type = 9;
+    optional int64 gym_points = 10;
+    optional bool is_in_battle = 11;
+  // Might represent the type of item applied to the pokestop, right now only lures can be applied
+    optional bytes active_port_modifier = 12;
+    optional FortLureInfoProto lure_info = 13;
+    optional int64 cooldown_complete_ms = 14;
+    // ENUM.Holoholo.Rpc.Sponsor.Types.FortSponsor.Sponsor Sponsor = 15;
+    optional int32 sponsor = 15;
+    // ENUM.Holoholo.Rpc.RenderingType.Types.FortRenderingType.RenderingType RenderingType = 16;
+    optional int32 rendering_type = 16;
+  }
+
+  message FortLureInfoProto {
+    required string fort_id = 1;
+    required double unknown2 = 2;
+    required int32 active_pokemon_id = 3;
+    required int64 lure_expires_timestamp_ms = 4;
+    optional string deployer_player_codename = 5;
+  }
+
+  message PokemonSummaryFortProto {
+    required string fort_summary_id = 1;
+    required int64 last_modified_ms = 2;
+    required double latitude = 3;
+    required double longitude = 4;
+  }
+
+  message ClientSpawnPointProto {
+    required double latitude = 2;
+    required double longitude = 3;
+  }
+
+  message WildPokemonProto {
+    optional uint64 encouter_id = 1;
+    optional int64 last_modified_ms = 2;
+    optional double latitude = 3;
+    optional double longitude = 4;
+    optional string spawn_point_id = 5;
+    optional Pokemon pokemon = 7;
+    optional int32 time_till_hidden_ms = 11;
+
+    message Pokemon {
+    	optional uint64 id = 1;
+    	optional int32 pokemon_id = 2;
+    }
+  }
+
+  message NearbyPokemonProto {
+    optional int32 pokedex_number = 1;
+    optional float distance_meters = 2;
+    optional uint64 encouter_id = 3;
+  }
+
+  message ProfilePayload {
+    required int32 unknown1 = 1;
+    optional Profile profile = 2;
+  }
+
+  message Profile {
+    required int64 creation_time = 1;
+    optional string username = 2;
+    optional int32 team = 5;
+    optional bytes tutorial = 7; 
+    optional AvatarDetails avatar = 8; 
+    optional int32 poke_storage = 9;
+    optional int32 item_storage = 10;
+    optional DailyBonus daily_bonus = 11;
+    optional bytes unknown12 = 12;
+    optional bytes unknown13 = 13;
+    repeated Currency currency = 14;
+
+    message AvatarDetails {
+      optional int32 unknown2 = 2;
+      optional int32 unknown3 = 3;
+      optional int32 unknown9 = 9;
+      optional int32 unknown10 = 10;
+    }
+
+    message DailyBonus {
+      optional int64 NextCollectTimestampMs = 1;
+      optional int64 NextDefenderBonusCollectTimestampMs = 2;
+    }
+
+    message Currency {
+      required string type = 1;
+      optional int32 amount = 2;
+    }
+  }
+}
