@@ -232,7 +232,7 @@
           :on-click #(if (= :google-map (:map-type @db) )
                        (swap! db assoc :map-type :google-map)
                        (swap! db assoc :map-type :heat-map))]
-         [rc/button
+         #_[rc/button
           :label "Existing Data"
           :on-click #(chsk-send! [:pokego/existing-data])]
          [rc/button

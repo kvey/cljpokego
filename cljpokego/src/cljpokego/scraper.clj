@@ -401,11 +401,11 @@
          (assoc :pokemon_name (pokemon-number->name (:pokedex-type-id mon)))) )))
 
 (defn store-sightings [mons]
-  (when-not (empty? mons)
+  #_(when-not (empty? mons)
     (j/insert-multi! postgres-db :spawn_events mons)))
 
 (defn fetch-all-sightings []
-  (j/query postgres-db ["SELECT * FROM spawn_events"]))
+  #_(j/query postgres-db ["SELECT * FROM spawn_events"]))
 
 (defn search-point [stop-flag cb [lat lng idx auth]]
   (go
@@ -454,7 +454,7 @@
           stop-flag)
          ]
      (println "DONE!")
-     #_(store-sightings (remove nil? (flatten all-pokemon )))
+     (store-sightings (remove nil? (flatten all-pokemon )))
      (println "STORAGE COMPLETE!"))))
 
 (defn get-mass-search-area-point-lists [radius search-lat search-lng]
