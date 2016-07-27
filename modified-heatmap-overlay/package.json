@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build-push-js": "browserify ./index.js -o ./dist.js ; cp ./dist.js ../cljpokego/resources/public/map.js",
+    "build-push-js": "browserify ./index.js -o ./dist.js ; cp ./dist.js ../resources/public/map.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "budo ./example/main.js -d ./example/ --live --host 127.0.0.1 --  | bistre",
     "lint": "uber-standard",

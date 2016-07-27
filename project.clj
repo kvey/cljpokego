@@ -6,6 +6,9 @@
   :resource-paths ["lib/s2-geometry-java.jar"
                    "resources"
                    #_"lib/guava-r09.jar"]
+
+  :source-paths ["src/clj"]
+  :java-source-paths ["src/java"]
   ;; clojurescript depends on another guava version
 
   :dependencies [[org.clojure/clojure "1.8.0"]
@@ -39,8 +42,7 @@
                  [reagent "0.6.0-alpha" :exclusions [cljsjs/react
                                                      cljsjs/react-dom-server]]
                  [re-com "0.8.0"]]
-  :plugins [[lein-protobuf "0.4.3"]
-            [lein-environ    "1.0.1"]
+  :plugins [[lein-environ    "1.0.1"]
             [lein-cljsbuild      "1.1.3"]
             [lein-pprint         "1.1.2"]]
 
@@ -48,7 +50,7 @@
   :cljsbuild
   {:builds
    [{:id :cljs-client
-     :source-paths ["src_cljs"]
+     :source-paths ["src/cljs"]
      :compiler {:output-to "resources/public/main.js"
                 :optimizations :whitespace #_:advanced
                 :pretty-print true}}]}

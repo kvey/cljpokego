@@ -3,13 +3,10 @@ Credential Setup
 *  Add your accounts to the account list
 *  Add your google maps key
 
-
 Running the clojure codebase
 *  `cd cljpokego`
-*  `lein protobuf`
 *  `lein cljsbuild once`
-*  `lein repl`
-*  `cljpokego.webserver=> (start!)`
+*  `lein run`
 *  navigate to localhost:5000
 
 Building javascript portion of lcient
@@ -34,3 +31,10 @@ https://github.com/AeonLucid/POGOProtos <- should switch to this?
 *  Other player pokemon nicknames aren't visible on gyms, but the data is available
 *  Map spawn locations
 *  Local high score list / gym territory map
+
+
+## Changelong
+```
+2016-07-27 14:02
+* Removed lein-protobuf, moved cljs, added java sources under src/java
+```

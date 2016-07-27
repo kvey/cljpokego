@@ -187,8 +187,9 @@
         (.addListener
          google.maps.event map-obj "click"
          (fn [event]
-           (swap! db assoc :pos {:lat (.lat (.-latLng event) )
-                                 :lng (.lng (.-latLng event) )})))
+           (swap! db update :viewport merge
+                  {:latitude (.lat (.-latLng event) )
+                   :longitude (.lng (.-latLng event) )})))
         (reset! global-gmap map-obj)))}))
 
 
@@ -219,20 +220,25 @@
        [rc/v-box
         :style {:position "fixed"
                 :left 0
-                :top 5
+                :top 50
                 :z-index 1000
                 :height "400px"
                 :width "200px"}
         :gap "10px"
         :children
-        [[rc/button
+        [
+         [:div {:style {:background "#FFF"
+                        :border-radius "5px"}}
+          (str (viewport->req (:viewport @db) ))]
+
+         [rc/button
           :label (if (= :google-map (:map-type @db) )
                    "Change To Heatmap"
                    "Change To Icon/Google Map")
           :on-click #(if (= :google-map (:map-type @db) )
-                       (swap! db assoc :map-type :google-map)
-                       (swap! db assoc :map-type :heat-map))]
-         #_[rc/button
+                       (swap! db assoc :map-type :heat-map)
+                       (swap! db assoc :map-type :google-map))]
+         [rc/button
           :label "Existing Data"
           :on-click #(chsk-send! [:pokego/existing-data])]
          [rc/button
