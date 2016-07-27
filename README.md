@@ -18,14 +18,14 @@ Building javascript portion of lcient
 https://github.com/AeonLucid/POGOProtos <- should switch to this?
 
 ## Todos
-*  Could really use some kind of indicator for where is going to be scanned
-*  Pokemon icons with mapgl
-*  Filter by pokemon type (ui)
-*  Spatially segment and identify composition of segments (PySAL?)
-*  Set scan location and size from client (I also have a theory that resolution is relevant, ref S2Cell portion of code)
-*  (done) Heatmap - general + filtered by pokemon type
-*  (done) Filter by pokemon type + evolutions? (mostly wonder if there's some kind of pattern)
-*  (done) Write scanned data to log file or db (centralize?)
+- [ ]  Could really use some kind of indicator for where is going to be scanned
+- [ ]  Pokemon icons with mapgl
+- [ ]  Spatially segment and identify composition of segments (PySAL?)
+- [ ]  Set scan location and size from client (I also have a theory that resolution is relevant, ref S2Cell portion of code)
+- [x]  Filter by pokemon type (ui)
+- [x]  Heatmap - general + filtered by pokemon type
+- [x]  Filter by pokemon type + evolutions? (mostly wonder if there's some kind of pattern)
+- [x]  Write scanned data to log file or db (centralize?)
 
 ## Ideas
 *  Other player pokemon nicknames aren't visible on gyms, but the data is available
