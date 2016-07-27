@@ -9,7 +9,7 @@ Running the clojure codebase
 Building javascript portion of lcient
 *  `cd modified-heatmap-overlay`
 *  `npm install`
-*  `npm run build-pus-js`
+*  `npm run build-push-js` (adds to cljpokego resources/public)
 
 
 https://github.com/AeonLucid/POGOProtos <- should switch to this?
