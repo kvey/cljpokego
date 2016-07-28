@@ -101,8 +101,8 @@
       (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
 
 
-(def search-radius 100)
-(def max-threads 1000)
+#_(def search-radius 100)
+(def max-threads 100)
 (defonce session-timestamp (tf/unparse (tf/formatters :basic-date-time-no-ms) (t/now)))
 
 (defmethod -event-msg-handler :pokego/names
@@ -112,7 +112,7 @@
                      (chesh/parse-string scraper/pokemon-english)])))
 
 
-(defmethod -event-msg-handler :pokego/get-pokemon-stream
+#_(defmethod -event-msg-handler :pokego/get-pokemon-stream
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (println ?data)
   (scraper/mass-search

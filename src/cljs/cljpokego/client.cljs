@@ -327,7 +327,7 @@
                                     {:lat (.lat sw)
                                      :lng (.lng sw)}] })])]
 
-         [rc/button
+         #_[rc/button
           :label "Mass Query"
           :on-click
           #(chsk-send! [:pokego/get-pokemon-stream

@@ -724,7 +724,7 @@
          _ (println "FAILED REQUESTS: " @failed-requests)
          ]
      (println "DONE!")
-     (store-sightings (remove nil? (flatten (map :pokemon @all-res))))
+     #_(store-sightings (remove nil? (flatten (map :pokemon @all-res))))
      (println "STORAGE COMPLETE!"))))
 
 
