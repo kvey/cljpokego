@@ -11,6 +11,8 @@
    [taoensso.sente     :as sente]
    [environ.core :refer [env]]
 
+   [cljpokego.sente :as sen]
+
    [clj-time.core :as t]
    [clj-time.coerce :as tc]
    [clj-time.format :as tf]
@@ -27,34 +29,6 @@
 
 
 
-;; (timbre/set-level! :trace) ; Uncomment for more logging
-(reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
-
-;;;; Define our Sente channel socket (chsk) server
-
-(let [;; Serializtion format, must use same val for client + server:
-      packer :edn ; Default packer, a good choice in most cases
-
-      chsk-server
-      (sente/make-channel-socket-server!
-       (get-sch-adapter) {:packer packer})
-
-      {:keys [ch-recv send-fn connected-uids
-              ajax-post-fn ajax-get-or-ws-handshake-fn]}
-      chsk-server]
-
-  (defonce ring-ajax-post                ajax-post-fn)
-  (defonce ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
-  (defonce ch-chsk                       ch-recv) ; ChannelSocket's receive channel
-  (defonce chsk-send!                    send-fn) ; ChannelSocket's send API fn
-  (defonce connected-uids                connected-uids) ; Watchable, read-only atom
-  )
-
-;; We can watch this atom for changes if we like
-(add-watch connected-uids :connected-uids
-           (fn [_ _ old new]
-             (when (not= old new)
-               (infof "Connected uids change: %s" new))))
 
 ;;;; Ring handlers
 
@@ -87,8 +61,8 @@
 
 (defroutes ring-routes
   (GET  "/"      ring-req (landing-pg-handler            ring-req))
-  (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
-  (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
+  (GET  "/chsk"  ring-req (sen/ring-ajax-get-or-ws-handshake ring-req))
+  (POST "/chsk"  ring-req (sen/ring-ajax-post                ring-req))
   (POST "/login" ring-req (login-handler                 ring-req))
   (route/resources "/") ; Static files, notably public/main.js (our cljs target)
   (route/not-found "<h1>Page not found</h1>"))
@@ -128,13 +102,13 @@
 
 
 (def search-radius 100)
-(def max-threads 20)
+(def max-threads 1000)
 (defonce session-timestamp (tf/unparse (tf/formatters :basic-date-time-no-ms) (t/now)))
 
 (defmethod -event-msg-handler :pokego/names
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid [:list/pokemon-names
+  (doseq [uid (:any @sen/connected-uids)]
+    (sen/chsk-send! uid [:list/pokemon-names
                      (chesh/parse-string scraper/pokemon-english)])))
 
 
@@ -147,8 +121,13 @@
    (:lng ?data )
    search-radius
    (fn [mon]
-     (doseq [uid (:any @connected-uids)]
-       (chsk-send! uid [:located/pokemon mon])))))
+     (doseq [uid (:any @sen/connected-uids)]
+       (sen/chsk-send! uid [:located/pokemon mon])))))
+
+(defmethod -event-msg-handler :pokego/spawn-point-search
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (scraper/spawn-point-search max-threads (:bounds ?data) (fn [mon])))
+
 
 (defmethod -event-msg-handler :pokego/get-pokemon-stream-test
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
@@ -157,32 +136,29 @@
    max-threads
    (:lat ?data )
    (:lng ?data )
-   2 ;; smaller test search area
+   1 ;; smaller test search area
    (fn [mon]
-     (println "MON CALLBACK")
-     (doseq [uid (:any @connected-uids)]
-       (do (println "UID SEND")
-           (println uid)
-           (chsk-send! uid [:located/pokemon mon]) )))))
+     (doseq [uid (:any @sen/connected-uids)]
+       (sen/chsk-send! uid [:located/pokemon mon])))))
 
 
 (defmethod -event-msg-handler :debug/mapping-area
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (doall (for [pnts (partition-all 50
                  (scraper/get-mass-search-area-point-lists
-                  10 ;; medium range search area
+                 1 ;; medium range search area
                   (:lat ?data)
                   (:lng ?data))) ]
-    (doseq [uid (:any @connected-uids)]
-      (chsk-send! uid [:debug/mapping-area {:pnts pnts}]))) ))
+    (doseq [uid (:any @sen/connected-uids)]
+      (sen/chsk-send! uid [:debug/mapping-area {:pnts pnts}]))) ))
 
 
 (defmethod -event-msg-handler :pokego/existing-data
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (doall
    (for [mons (partition-all 300 (scraper/fetch-all-sightings)) ]
-     (doseq [uid (:any @connected-uids)]
-       (do (chsk-send! uid [:located/pokemon mons])
+     (doseq [uid (:any @sen/connected-uids)]
+       (do (sen/chsk-send! uid [:located/pokemon mons])
            (Thread/sleep 10))))))
 
 
@@ -202,7 +178,7 @@
   (stop-router!)
   (reset! router_
           (sente/start-server-chsk-router!
-           ch-chsk event-msg-handler)))
+           sen/ch-chsk event-msg-handler)))
 
 ;;;; Init stuff
 

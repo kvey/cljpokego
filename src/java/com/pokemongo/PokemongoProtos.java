@@ -2790,20 +2790,20 @@ public final class PokemongoProtos {
       long getSinceTimestampMs(int index);
 
       /**
-       * <code>required fixed64 latitude = 3;</code>
+       * <code>optional fixed64 latitude = 3;</code>
        */
       boolean hasLatitude();
       /**
-       * <code>required fixed64 latitude = 3;</code>
+       * <code>optional fixed64 latitude = 3;</code>
        */
       long getLatitude();
 
       /**
-       * <code>required fixed64 longitude = 4;</code>
+       * <code>optional fixed64 longitude = 4;</code>
        */
       boolean hasLongitude();
       /**
-       * <code>required fixed64 longitude = 4;</code>
+       * <code>optional fixed64 longitude = 4;</code>
        */
       long getLongitude();
     }
@@ -3006,13 +3006,13 @@ public final class PokemongoProtos {
       public static final int LATITUDE_FIELD_NUMBER = 3;
       private long latitude_;
       /**
-       * <code>required fixed64 latitude = 3;</code>
+       * <code>optional fixed64 latitude = 3;</code>
        */
       public boolean hasLatitude() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required fixed64 latitude = 3;</code>
+       * <code>optional fixed64 latitude = 3;</code>
        */
       public long getLatitude() {
         return latitude_;
@@ -3021,13 +3021,13 @@ public final class PokemongoProtos {
       public static final int LONGITUDE_FIELD_NUMBER = 4;
       private long longitude_;
       /**
-       * <code>required fixed64 longitude = 4;</code>
+       * <code>optional fixed64 longitude = 4;</code>
        */
       public boolean hasLongitude() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required fixed64 longitude = 4;</code>
+       * <code>optional fixed64 longitude = 4;</code>
        */
       public long getLongitude() {
         return longitude_;
@@ -3045,14 +3045,6 @@ public final class PokemongoProtos {
         if (isInitialized == 1) return true;
         if (isInitialized == 0) return false;
 
-        if (!hasLatitude()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        if (!hasLongitude()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
         memoizedIsInitialized = 1;
         return true;
       }
@@ -3343,14 +3335,6 @@ public final class PokemongoProtos {
         }
 
         public final boolean isInitialized() {
-          if (!hasLatitude()) {
-            
-            return false;
-          }
-          if (!hasLongitude()) {
-            
-            return false;
-          }
           return true;
         }
 
@@ -3507,19 +3491,19 @@ public final class PokemongoProtos {
 
         private long latitude_ ;
         /**
-         * <code>required fixed64 latitude = 3;</code>
+         * <code>optional fixed64 latitude = 3;</code>
          */
         public boolean hasLatitude() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         /**
-         * <code>required fixed64 latitude = 3;</code>
+         * <code>optional fixed64 latitude = 3;</code>
          */
         public long getLatitude() {
           return latitude_;
         }
         /**
-         * <code>required fixed64 latitude = 3;</code>
+         * <code>optional fixed64 latitude = 3;</code>
          */
         public Builder setLatitude(long value) {
           bitField0_ |= 0x00000004;
@@ -3528,7 +3512,7 @@ public final class PokemongoProtos {
           return this;
         }
         /**
-         * <code>required fixed64 latitude = 3;</code>
+         * <code>optional fixed64 latitude = 3;</code>
          */
         public Builder clearLatitude() {
           bitField0_ = (bitField0_ & ~0x00000004);
@@ -3539,19 +3523,19 @@ public final class PokemongoProtos {
 
         private long longitude_ ;
         /**
-         * <code>required fixed64 longitude = 4;</code>
+         * <code>optional fixed64 longitude = 4;</code>
          */
         public boolean hasLongitude() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
         /**
-         * <code>required fixed64 longitude = 4;</code>
+         * <code>optional fixed64 longitude = 4;</code>
          */
         public long getLongitude() {
           return longitude_;
         }
         /**
-         * <code>required fixed64 longitude = 4;</code>
+         * <code>optional fixed64 longitude = 4;</code>
          */
         public Builder setLongitude(long value) {
           bitField0_ |= 0x00000008;
@@ -3560,7 +3544,7 @@ public final class PokemongoProtos {
           return this;
         }
         /**
-         * <code>required fixed64 longitude = 4;</code>
+         * <code>optional fixed64 longitude = 4;</code>
          */
         public Builder clearLongitude() {
           bitField0_ = (bitField0_ & ~0x00000008);
@@ -27824,7 +27808,7 @@ public final class PokemongoProtos {
       "f1\030\001 \002(\014\022\n\n\002f2\030\002 \002(\014\022\013\n\003lat\030\003 \002(\006\022\014\n\004lon" +
       "g\030\004 \002(\006\032p\n\024GetMapObjectsMessage\022\023\n\007cell_" +
       "id\030\001 \003(\004B\002\020\001\022\036\n\022since_timestamp_ms\030\002 \003(\003" +
-      "B\002\020\001\022\020\n\010latitude\030\003 \002(\006\022\021\n\tlongitude\030\004 \002(" +
+      "B\002\020\001\022\020\n\010latitude\030\003 \001(\006\022\021\n\tlongitude\030\004 \001(" +
       "\006\032\026\n\003Wat\022\017\n\004lols\030\200\200\200@ \003(\003\032I\n\010Unknown3\022\020\n" +
       "\010unknown4\030\001 \002(\014\022\020\n\010unknown2\030\002 \001(\014\022\013\n\003lat" +
       "\030\003 \001(\006\022\014\n\004long\030\004 \001(\006\032w\n\010Unknown6\022\020\n\010unkn",

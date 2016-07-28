@@ -43,8 +43,8 @@ message RequestEnvelop {
   message GetMapObjectsMessage {
     repeated uint64 cell_id = 1 [packed=true];
     repeated int64 since_timestamp_ms = 2 [packed=true];
-    required fixed64 latitude = 3;
-    required fixed64 longitude = 4;   
+    optional fixed64 latitude = 3;
+    optional fixed64 longitude = 4;   
   }
 
   message Wat {

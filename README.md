@@ -22,6 +22,7 @@ https://github.com/AeonLucid/POGOProtos <- should switch to this?
 - [ ]  Pokemon icons with mapgl
 - [ ]  Spatially segment and identify composition of segments (PySAL?)
 - [ ]  Set scan location and size from client (I also have a theory that resolution is relevant, ref S2Cell portion of code)
+- [ ]  Login credentials in UI, update UI as multiple accounts are logged in or not
 - [x]  Filter by pokemon type (ui)
 - [x]  Heatmap - general + filtered by pokemon type
 - [x]  Filter by pokemon type + evolutions? (mostly wonder if there's some kind of pattern)

@@ -68,4 +68,4 @@
     (<!! (pmax max-threads f input output stop-flag))
     ;; confirm max thread limit, vector should max at maxthread
     #_(println @thread-counts) 
-    @result))
+    result))

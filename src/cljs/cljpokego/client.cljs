@@ -57,6 +57,22 @@
             :zoom 8
             :map-style map-style}}))
 
+(defonce marker-objs (atom []))
+(def search-rect
+  (js/google.maps.Rectangle.
+   (clj->js
+    {:bounds
+     {:north 37.77994
+      :south 37.73406
+      :east -122.42202 
+      :west -122.47215}
+     :fillColor "#00FF00"
+     :strokeColor "#888"
+     :strokeOpacity 0.8
+     :fillOpacity 0.05
+     :editable true
+     :draggable true})))
+
 
 (defn add-marker [lat lng icon]
   (js/google.maps.Marker.
@@ -71,12 +87,43 @@
   (js/google.maps.Polygon.
    (clj->js
     {:map @global-gmap
+     :clickable false
      :paths pnts
      :strokeColor "#FF0000"
      :strokeOpacity 0.8
      :strokeWeight 2
      :fillColor "#FF0000"
-     :fillOpacity 0.10})))
+     :fillOpacity 0.05})))
+
+(defn add-response-poly
+  ([pnts] (add-response-poly pnts "#0000FF"))
+  ([pnts color]
+  #_(println pnts)
+  (js/google.maps.Polygon.
+   (clj->js
+    {:map @global-gmap
+     :clickable false
+     :paths pnts
+     :strokeColor color
+     :strokeOpacity 0.8
+     :strokeWeight 2
+     :fillColor color
+     :fillOpacity 0.05}))))
+
+(defn add-circle [lat lng]
+  #_(println pnts)
+  (js/google.maps.Circle.
+   (clj->js
+    {:map @global-gmap
+     :clickable false
+     :radius 3
+     :center {:lat lat
+              :lng lng}
+     :strokeColor "#0000FF"
+     :strokeOpacity 0.8
+     :strokeWeight 2
+     :fillColor "#0000FF"
+     :fillOpacity 0.05})))
 
 (defmulti local-msg-handler first)
 
@@ -88,15 +135,42 @@
       (doall
        (map
         (fn [p]
-          (add-marker
-           (:latitude p)
-           (:longitude p)
-           (str "/icons/" (:pokedex_type_id p) ".png")))
+          (swap! marker-objs conj
+                 {:data p
+                  :marker (add-marker
+                           (:latitude p)
+                           (:longitude p)
+                           (str "/icons/" (:pokedex_type_id p) ".png")) } ))
         payload))
       (when (.-updatePokemon js/window)
         (js/addHeatmapPoints (clj->js payload)))
       )
     ))
+
+(defmethod local-msg-handler :located/spawn-points [?data]
+  (let [[ev-msg payload] ?data]
+    #_(infof "Pokemon: %s" payload)
+
+    (if (= :google-map (:map-type @db) )
+      (doall
+       (map
+        (fn [p]
+          (add-circle
+           (:latitude p)
+           (:longitude p)))
+        payload)))))
+
+(defmethod local-msg-handler :located/cells [?data]
+  (let [[ev-msg payload] ?data]
+    (if (= :google-map (:map-type @db) )
+      (doall (map
+              (fn [poly]
+                (if (:color payload)
+                  (add-response-poly poly (:color payload))
+                  (add-response-poly poly)))
+              (:pnts payload))))))
+
+
 
 (defmethod local-msg-handler :list/pokemon-names [?data]
   (let [[ev-msg payload] ?data]
@@ -190,6 +264,7 @@
            (swap! db update :viewport merge
                   {:latitude (.lat (.-latLng event) )
                    :longitude (.lng (.-latLng event) )})))
+        (.setMap search-rect map-obj)
         (reset! global-gmap map-obj)))}))
 
 
@@ -242,19 +317,46 @@
           :label "Existing Data"
           :on-click #(chsk-send! [:pokego/existing-data])]
          [rc/button
+          :label "Spawn Point Search"
+          :on-click
+          #(chsk-send! [:pokego/spawn-point-search
+                        (let [ne (.getNorthEast (.getBounds search-rect) )
+                              sw (.getSouthWest (.getBounds search-rect) )]
+                          {:bounds [{:lat (.lat ne)
+                                     :lng (.lng ne)}
+                                    {:lat (.lat sw)
+                                     :lng (.lng sw)}] })])]
+
+         [rc/button
           :label "Mass Query"
           :on-click
           #(chsk-send! [:pokego/get-pokemon-stream
-                        (viewport->req (:viewport @db) )])]
+                        (let [ne (.getNorthEast (.getBounds @search-rect) )
+                              sw (.getSouthWest (.getBounds @search-rect) )]
+                          [{:lat (.lat ne)
+                            :lng (.lng ne)}
+                           {:lat (.lat sw)
+                            :lng (.lng sw)}])])]
          [rc/button
           :label "Test Query"
           :on-click
           #(chsk-send! [:pokego/get-pokemon-stream-test
                         (viewport->req (:viewport @db) )])]
-         #_[rc/button ;; this depends on gmaps still
-          :label "Debug Mapping Area"
-          :on-click #(chsk-send! [:debug/mapping-area
-                                  (viewport->req (:viewport @db))])]]
+         (when
+             (= :google-map (:map-type @db) )
+           [rc/button ;; this depends on gmaps still
+            :label "Debug Mapping Area"
+            :on-click #(chsk-send! [:debug/mapping-area
+                                    (viewport->req (:viewport @db))])] )
+
+         (when (= :google-map (:map-type @db) )
+           [rc/button ;; this depends on gmaps still
+            :label "Hide Current Markers"
+            :on-click #(doall (map (fn [m] (do
+                                      (println m)
+                                      (.setMap (:marker m) nil) m)) @marker-objs) )])
+         ]
+        
         ]
 
        [:div
