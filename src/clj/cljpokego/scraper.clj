@@ -125,7 +125,7 @@
 (def tiling-lat 0.0032)
 (def tiling-long 0.0040)
 
-(def cell-level 15)
+(def cell-level 16)
 (def cell-count 1)
 
 ;;(def tiling-lat 0.0050)
@@ -136,7 +136,7 @@
 
 (defonce my-executor
   (let [executor-svc (Executors/newFixedThreadPool
-                      1000
+                      1
                       (conc/counted-thread-factory "async-dispatch-%d" true))]
     (reify protocols/Executor
       (protocols/exec [this r]
@@ -361,7 +361,9 @@
      {:cell_id
       (traverse-query lat lng)
       :since_timestamp_ms
-      (take (count (traverse-query lat lng)) (repeat 0))})}))
+      (take (count (traverse-query lat lng)) (repeat 0))
+      :latitude (float-to-int64 lat)
+      :longitude (float-to-int64 lng)})}))
 
 (defn prot-empty-126 []
   (proto/protobuf Requests {:type 126}))
@@ -478,13 +480,15 @@
                                                  (:password %)) "access_token")
                     req-api-url (when access-token (api-url access-token) )]
                 (when (:api-url req-api-url)
-                  {:api-url (str "https://" (:api-url req-api-url) "/rpc")
-                   :access-token access-token}))
+                  (do
+                    (println (str "https://" (:api-url req-api-url) "/rpc"))
+                    {:api-url (str "https://" (:api-url req-api-url) "/rpc")
+                   :access-token access-token} )))
              (remove nil? accounts))
        (reset! scraper-auth))
   (str "Accounts #: " (count @scraper-auth) ))
 
-(at-at/every (* 7200 60) login-accounts recurring-pool)
+(at-at/every (* 10800 60) login-accounts recurring-pool)
 
 
 (defn sql-format-keys [m]
@@ -519,6 +523,7 @@
                             (proto/protobuf-load HeartbeatPayload)) )
                      (catch Exception e
                        #_(println "Protobuf Parse Error (probably no contents)")
+                       (println e)
                        (swap! failed-requests inc)
                        nil))
             pokemon (flatten (remove nil? (map ->pokemon (:cells res))))]
@@ -546,7 +551,7 @@
           (do
             (swap! failed-requests inc)
             #_(println "Kill")
-            #_(println req)
+            (println req)
             #_(reset! stop-flag true)
             nil)
           (do
@@ -555,7 +560,7 @@
             (assoc res :pokemon pokemon)))) )))
 
 
-(defn search-cell-list [max-threads cell-list radius cb]
+(defn search-cell-list [max-threads cell-list cb]
   (let [lat-lng-points
         (map #(let [l (.toLatLng (.id %))]
                 [(.latDegrees l)
@@ -648,47 +653,42 @@
         _ (println "FAILED REQUESTS: " @failed-requests)
 
 
-        spawn-points (remove nil? (flatten (map :spawn-point (flatten (map :cells @all-res ) ) ) ) )
-
-
-        spawn-point-cells
-        (pokecon/parallel-frame
-         12
-         spawn-points
-         (fn [sp]
-           (go (let [c (S2Cell. (S2LatLng/fromDegrees (:latitude sp) (:longitude sp)))
-                 origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
-             (S2Cell. origin-cell )) ))
-         stop-flag)
-
-
-        #_(pmap (fn [sp]
-               (let [c (S2Cell. (S2LatLng/fromDegrees (:latitude sp) (:longitude sp)))
-                     origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
-                 (S2Cell. origin-cell ))) spawn-points)
-
-        _ (println "POKEMON QUERY COUNT: " (count (distinct @spawn-point-cells)))
-
-        _ (let [uid (first (:any @sen/connected-uids) )]
-            (sen/chsk-send! uid [:located/cells {:pnts (map cell->points (distinct @spawn-point-cells))
-                                                 :color "#0000FF"}]))
-
-        spawn-cells (search-cell-list 100 (distinct @spawn-point-cells ) 1
-                          (fn [mon]
-                            (doseq [uid (:any @sen/connected-uids)]
-                              (sen/chsk-send! uid [:located/pokemon mon]))))
-
+;;        spawn-points (remove nil? (flatten (map :spawn-point (flatten (map :cells @all-res ) ) ) ) )
+;; 
+;; 
+;;        spawn-point-cells
+;;        (pokecon/parallel-frame
+;;         12
+;;         spawn-points
+;;         (fn [sp]
+;;           (go (let [c (S2Cell. (S2LatLng/fromDegrees (:latitude sp) (:longitude sp)))
+;;                 origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
+;;             (S2Cell. origin-cell )) ))
+;;         stop-flag)
+;; 
+;; 
+;;        #_(pmap (fn [sp]
+;;               (let [c (S2Cell. (S2LatLng/fromDegrees (:latitude sp) (:longitude sp)))
+;;                     origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
+;;                 (S2Cell. origin-cell ))) spawn-points)
+;; 
+;;        _ (println "POKEMON QUERY COUNT: " (count (distinct @spawn-point-cells)))
+;; 
+;;        _ (let [uid (first (:any @sen/connected-uids) )]
+;;            (sen/chsk-send! uid [:located/cells {:pnts (map cell->points (distinct @spawn-point-cells))
+;;                                                 :color "#0000FF"}]))
+;; 
+;;        spawn-cells (search-cell-list (distinct @spawn-point-cells ) 1
+;;                          (fn [mon]
+;;                            (doseq [uid (:any @sen/connected-uids)]
+;;                              (sen/chsk-send! uid [:located/pokemon mon]))))
+;; 
          #_(let [uid (first (:any @sen/connected-uids) )]
             (sen/chsk-send! uid [:located/cells {:pnts (map cell->points (remove nil? (filter-against nil? @spawn-cells spawn-point-cells) ))
                                                  :color "#00FF00"}]))
 
         ]
-    
-
-
-    
-
-    spawn-cells))
+    all-res))
 
 
 

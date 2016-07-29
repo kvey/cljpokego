@@ -102,7 +102,7 @@
 
 
 #_(def search-radius 100)
-(def max-threads 100)
+(def max-threads 1)
 (defonce session-timestamp (tf/unparse (tf/formatters :basic-date-time-no-ms) (t/now)))
 
 (defmethod -event-msg-handler :pokego/names
