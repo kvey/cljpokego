@@ -136,7 +136,7 @@
 
 (defonce my-executor
   (let [executor-svc (Executors/newFixedThreadPool
-                      1
+                      4
                       (conc/counted-thread-factory "async-dispatch-%d" true))]
     (reify protocols/Executor
       (protocols/exec [this r]
@@ -462,7 +462,8 @@
                  (deref)
                  (:body)
                  (proto/protobuf-load ResponseEnvelop)) ]
-        (when res (swap! memoize-cache assoc (str [lat long]) res))
+        (when (and res (not= res {:unknown1 52})) ;; explicitly handle rate limiting case
+          (swap! memoize-cache assoc (str [lat long]) res))
         res)
       (catch Exception e
         (swap! failed-requests inc)
@@ -514,7 +515,7 @@
 (defn fetch-all-sightings []
   #_(j/query postgres-db ["SELECT * FROM spawn_events"]))
 
-(defn search-point [failed-requests stop-flag cb [lat lng idx auth]]
+(defn search-point [failed-requests stop-flag cb failure-cb [lat lng idx auth]]
   (go
     (when-let [req (search-map-data failed-requests auth lat lng)]
       (let [res (try (when-let [first-payload (first (:payload req))]
@@ -525,6 +526,7 @@
                        #_(println "Protobuf Parse Error (probably no contents)")
                        (println e)
                        (swap! failed-requests inc)
+                       (failure-cb lat lng idx auth)
                        nil))
             pokemon (flatten (remove nil? (map ->pokemon (:cells res))))]
 
@@ -551,6 +553,7 @@
           (do
             (swap! failed-requests inc)
             #_(println "Kill")
+            (failure-cb lat lng idx auth)
             (println req)
             #_(reset! stop-flag true)
             nil)
@@ -579,7 +582,7 @@
         (pokecon/parallel-frame
          max-threads
          lat-lng-points-auth
-         (partial search-point failed-requests stop-flag cb)
+         (partial search-point failed-requests stop-flag cb (fn []))
          stop-flag)
 
         _ (println "FAILED REQUESTS: " @failed-requests)
@@ -607,9 +610,9 @@
         _ (S2RegionCoverer/getSimpleCovering region-rect (.toPoint (S2LatLng/fromDegrees (:lat ne) (:lng ne)) ) 15 small-cells-out)
         small-cells (map #(S2Cell. %) small-cells-out)
 
-        _ (let [uid (first (:any @sen/connected-uids) )]
-            (sen/chsk-send! uid [:located/cells {:pnts (map cell->points cells)
-                                                 :color "#0000FF"}]))
+        ;;_ (let [uid (first (:any @sen/connected-uids) )]
+        ;;    (sen/chsk-send! uid [:located/cells {:pnts (map cell->points cells)
+         ;;                                        :color "#0000FF"}]))
 
         lat-lng-points (map #(let [l (.toLatLng (.id %))]
                                [(.latDegrees l)
@@ -637,12 +640,25 @@
          (partial search-point failed-requests stop-flag
                   (fn [mon]
                     (doseq [uid (:any @sen/connected-uids)]
-                      (sen/chsk-send! uid [:located/pokemon mon]))))
+                      (sen/chsk-send! uid [:located/pokemon mon])))
+                  (fn [lat lng idx auth]
+                    (println "FAILURE CB")
+                    (let [uid (first (:any @sen/connected-uids) )]
+                      (sen/chsk-send!
+                       uid
+                       [:located/cells
+                        {:pnts (map cell->points
+                                    [ (let [c (S2Cell. (S2LatLng/fromDegrees lat lng))
+                                          origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
+                                      (S2Cell. origin-cell )) ])
+                         :color "#FF0000"}]))
+
+                    ))
          stop-flag)
 
         ;;_ (println (map nil? (map :cells @all-res )))
 
-         #_(let [uid (first (:any @sen/connected-uids) )]
+         _ (let [uid (first (:any @sen/connected-uids) )]
             (sen/chsk-send! uid [:located/cells {:pnts (map cell->points
                                                             (remove nil?
                                                                     (filter-against #(or (empty?  %) (nil? %))

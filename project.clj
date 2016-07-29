@@ -27,6 +27,7 @@
                  [hikari-cp "1.6.1"]
                  [environ "1.0.1"]
 
+                 [throttler "1.0.0"]
 
                  ;; webserver
                  [http-kit "2.1.18"]
