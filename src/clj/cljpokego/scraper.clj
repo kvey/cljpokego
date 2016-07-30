@@ -20,6 +20,8 @@
 
    [cljpokego.sente :as sen]
 
+   [throttler.core :refer [throttle-chan throttle-fn fn-throttler]]
+
    [clojure.core.async.impl.protocols :as protocols]
    [clojure.core.async.impl.concurrent :as conc]
    [clojure.core.async.impl.exec.threadpool :as tp]
@@ -125,7 +127,7 @@
 (def tiling-lat 0.0032)
 (def tiling-long 0.0040)
 
-(def cell-level 16)
+(def cell-level 15)
 (def cell-count 1)
 
 ;;(def tiling-lat 0.0050)
@@ -144,6 +146,10 @@
 
 (alter-var-root #'clojure.core.async.impl.dispatch/executor
                 (constantly (delay my-executor)))
+
+
+
+
 
 
 (def pokemon-english
@@ -351,7 +357,7 @@
       :lat (float-to-int64 lat)
       :long (float-to-int64 lng)})}))
 
-(defn prot-query-map-data [lat lng]
+(defn prot-query-map-data [lat lng t]
   (proto/protobuf
    Requests
    {:type 106
@@ -361,20 +367,21 @@
      {:cell_id
       (traverse-query lat lng)
       :since_timestamp_ms
-      (take (count (traverse-query lat lng)) (repeat 0))
+      (take (count (traverse-query lat lng)) (repeat t))
       :latitude (float-to-int64 lat)
-      :longitude (float-to-int64 lng)})}))
+      :longitude (float-to-int64 lng)
+      })}))
 
 (defn prot-empty-126 []
   (proto/protobuf Requests {:type 126}))
 
-(defn prot-timestamp-now []
+(defn prot-timestamp-now [t]
   (proto/protobuf
    Requests
    {:type 4
     :message
     (protobuf-bytestring
-     MessageSingleInt {:f1 (tc/to-long (t/now))})}))
+     MessageSingleInt {:f1 t})}))
 
 (defn prot-empty-129 []
   (proto/protobuf Requests {:type 129}))
@@ -391,25 +398,25 @@
 
 
 (defn prot-map-objects [access-token lat lng]
-  (protobuf-bytestring
-   RequestEnvelop
-   {:rpc_id 1469378659230941192
-    :latitude (float-to-int64 lat)
-    :longitude (float-to-int64 lng)
-    :altitude 0
-    :unknown1 2
-    :unknown12 989
-    :auth
-    {:provider "ptc"
-     :token {:contents access-token
-             :unknown13 14}}
-    :requests
-    [(prot-query-map-data lat lng)
-     (prot-empty-126)
-     (prot-timestamp-now)
-     (prot-empty-129)
-     (prot-magic-identifier)]})
-  )
+  (let [t (tc/to-long (t/minus (t/now) (t/days 20)) )]
+    (protobuf-bytestring
+     RequestEnvelop
+     {:rpc_id 1469378659230941192
+      :latitude (float-to-int64 lat)
+      :longitude (float-to-int64 lng)
+      :altitude 0
+      :unknown1 2
+      :unknown12 989
+      :auth
+      {:provider "ptc"
+       :token {:contents access-token
+               :unknown13 14}}
+      :requests
+      [(prot-query-map-data lat lng t)
+       (prot-empty-126)
+       (prot-timestamp-now t)
+       (prot-empty-129)
+       (prot-magic-identifier)]}) ))
 
 (defn prot-profile [access-token]
   (protobuf-bytestring
@@ -437,7 +444,9 @@
   {:user-agent "niantic" :as :byte-array :body body
    :timeout 5000})
 
-(defn api-url [access-token]
+(def api-throttler (fn-throttler 30 :second))
+
+(defn x-api-url [access-token]
   (try (->>
         (niantic-req (.asReadOnlyByteBuffer (prot-profile access-token) ))
         (http/post API_URL)
@@ -447,10 +456,13 @@
        (catch Exception e
          nil)))
 
+(def api-url (api-throttler x-api-url))
+
 (defonce memoize-cache (atom {}))
 #_(reset! memoize-cache {})
 
-(defn search-map-data [failed-requests auth lat long]
+(defn x-search-map-data [failed-requests auth lat long]
+  (println "SEARCH MAP DATA")
   (if (get @memoize-cache (str [lat long] ))
     (get @memoize-cache (str [lat long] ))
     (try
@@ -467,10 +479,13 @@
         res)
       (catch Exception e
         (swap! failed-requests inc)
+        (println e)
         #_(println "Failed map lookup - no content field probably")
         #_(Thread/sleep 1000)
         #_(search-map-data auth lat long)
-        nil)) ))
+        nil))))
+
+(def search-map-data (api-throttler x-search-map-data))
 
 
 (defonce scraper-auth (atom []))
@@ -516,51 +531,58 @@
   #_(j/query postgres-db ["SELECT * FROM spawn_events"]))
 
 (defn search-point [failed-requests stop-flag cb failure-cb [lat lng idx auth]]
-  (go
-    (when-let [req (search-map-data failed-requests auth lat lng)]
-      (let [res (try (when-let [first-payload (first (:payload req))]
-                       (->> first-payload
-                            (.toByteArray)
-                            (proto/protobuf-load HeartbeatPayload)) )
-                     (catch Exception e
-                       #_(println "Protobuf Parse Error (probably no contents)")
-                       (println e)
-                       (swap! failed-requests inc)
-                       (failure-cb lat lng idx auth)
-                       nil))
-            pokemon (flatten (remove nil? (map ->pokemon (:cells res))))]
+  (when-let [req (search-map-data failed-requests auth lat lng)]
+    (let [res (try (when-let [payload (first (:payload req) ) ]
+                     (->> payload
+                          (.toByteArray)
+                          (proto/protobuf-load HeartbeatPayload)) )
+                   (catch Exception e
+                     #_(println "Protobuf Parse Error (probably no contents)")
+                     (println e)
+                     (swap! failed-requests inc)
+                     (failure-cb lat lng idx auth)
+                     nil))
 
-        (doseq [cell (:cells res)]
-          (let [uid (first (:any @sen/connected-uids) )]
-            #_(sen/chsk-send! uid [:located/spawn-points (:spawn-point cell)])
-            #_(sen/chsk-send! uid [:located/cells {:pnts [(cell->points
+          _ (println res)
+          pokemon (flatten (remove nil? (map ->pokemon (:cells res))))]
 
-                                                           (S2Cell. (.parent (.id (S2Cell. (S2CellId. (:s2-cell-id cell)))) 13) )
-                                                           ) ] }])
-            #_(sen/chsk-send! uid [:located/cells {:pnts
-                                                   (doall (map
-                                                           (fn [mon]
-                                                             (cell->points
-                                                              (S2Cell. (.parent (.id (S2Cell. (S2LatLng/fromDegrees
-                                                                                               (:latitude mon)
-                                                                                               (:longitude mon)))) 16) )
+      (doseq [cell (:cells res)]
+        (let [uid (first (:any @sen/connected-uids) )]
+          (sen/chsk-send! uid [:located/spawn-points (:spawn-point cell)])
+          (println (.level (S2CellId. (:s2-cell-id cell)) ))
+          (sen/chsk-send! uid [:located/cells {:pnts [(cell->points
+                                                       (S2Cell. (S2CellId. (:s2-cell-id cell)))
+                                                       #_(S2Cell. (.parent (.id (S2Cell. (S2CellId. (:s2-cell-id cell)))) 13) )
+                                                       ) ]
+                                               :color "#000000"}
+                               ])
+          #_(sen/chsk-send! uid [:located/cells {:pnts
+                                                 (doall (map
+                                                         (fn [mon]
+                                                           (cell->points
+                                                            (S2Cell. (.parent (.id (S2Cell. (S2LatLng/fromDegrees
+                                                                                             (:latitude mon)
+                                                                                             (:longitude mon)))) 16) )
 
-                                                              ))
-                                                           (:map-pokemon cell)) )}])))
-        (if
-            (or (nil? res) (not (:cells res)) )
-          #_(or (not (:cells res)) (not (contains? (:cells res) :map-pokemon)))
-          (do
-            (swap! failed-requests inc)
-            #_(println "Kill")
-            (failure-cb lat lng idx auth)
-            (println req)
-            #_(reset! stop-flag true)
-            nil)
-          (do
-            #_(println pokemon)
-            (cb pokemon)
-            (assoc res :pokemon pokemon)))) )))
+                                                            ))
+                                                         (:map-pokemon cell)) )}])))
+      (if
+          (or (nil? res) (not (:cells res)) )
+        #_(or (not (:cells res)) (not (contains? (:cells res) :map-pokemon)))
+        (do
+          (swap! failed-requests inc)
+          #_(println "Kill")
+          (failure-cb lat lng idx auth)
+          (println req)
+          #_(reset! stop-flag true)
+          nil)
+        (do
+          #_(println pokemon)
+          (cb pokemon)
+          (assoc res :pokemon pokemon))))
+    )
+  #_(go
+      ))
 
 
 (defn search-cell-list [max-threads cell-list cb]
@@ -607,12 +629,12 @@
 
 
         small-cells-out (java.util.ArrayList. [])
-        _ (S2RegionCoverer/getSimpleCovering region-rect (.toPoint (S2LatLng/fromDegrees (:lat ne) (:lng ne)) ) 15 small-cells-out)
+        _ (S2RegionCoverer/getSimpleCovering region-rect (.toPoint (S2LatLng/fromDegrees (:lat ne) (:lng ne)) ) cell-level small-cells-out)
         small-cells (map #(S2Cell. %) small-cells-out)
 
-        ;;_ (let [uid (first (:any @sen/connected-uids) )]
-        ;;    (sen/chsk-send! uid [:located/cells {:pnts (map cell->points cells)
-         ;;                                        :color "#0000FF"}]))
+         _ (let [uid (first (:any @sen/connected-uids) )]
+            (sen/chsk-send! uid [:located/cells {:pnts (map cell->points cells)
+                                                 :color "#0000FF"}]))
 
         lat-lng-points (map #(let [l (.toLatLng (.id %))]
                                [(.latDegrees l)
@@ -634,9 +656,30 @@
         failed-requests (atom 0)
 
         all-res
-        (pokecon/parallel-frame
+        (doall
+         (for [p lat-lng-points-auth]
+           (time ((partial search-point failed-requests stop-flag
+                     (fn [mon]
+                       (doseq [uid (:any @sen/connected-uids)]
+                         (sen/chsk-send! uid [:located/pokemon mon])))
+                     (fn [lat lng idx auth]
+                       (println "FAILURE CB")
+                       (let [uid (first (:any @sen/connected-uids) )]
+                         (sen/chsk-send!
+                          uid
+                          [:located/cells
+                           {:pnts (map cell->points
+                                       [ (let [c (S2Cell. (S2LatLng/fromDegrees lat lng))
+                                               origin-cell (.id (S2Cell. (.parent (.id c) 16)))]
+                                           (S2Cell. origin-cell )) ])
+                            :color "#FF0000"}]))
+
+                       )) p) )) )
+
+
+
+        #_(pokecon/parallel-frame
          max-threads
-         lat-lng-points-auth
          (partial search-point failed-requests stop-flag
                   (fn [mon]
                     (doseq [uid (:any @sen/connected-uids)]
@@ -662,7 +705,7 @@
             (sen/chsk-send! uid [:located/cells {:pnts (map cell->points
                                                             (remove nil?
                                                                     (filter-against #(or (empty?  %) (nil? %))
-                                                                                    (map :spawn-points @all-res ) cells) ))
+                                                                                    (map :spawn-points all-res ) cells) ))
                                                  :color "#00FF00"}]))
 
 
@@ -753,4 +796,37 @@
      (get-cell-mapping-bounds-list lat lng))))
 
 
+
+
+(def latlngset
+  (let [cell (S2Cell. (.parent (.id (S2Cell. (S2LatLng/fromDegrees 37.7702549 -122.444787))) 18))]
+    (map vals (map s2-point->latlng
+                   [(.getVertex cell 0)
+                    (.getVertex cell 1)
+                    (.getVertex cell 2)
+                    (.getVertex cell 3)
+                    (.getVertex cell 0)]))))
+
+(def earth-radius 6371.009)
+
+(defn degrees->radians [point]
+  (mapv #(Math/toRadians %) point))
+
+(defn distance-between
+  "Calculate the distance in km between two points on Earth. Each
+  point is a pair of degrees latitude and longitude, in that order."
+  ([p1 p2] (distance-between p1 p2 earth-radius))
+  ([p1 p2 radius]
+   (let [[lat1 long1] (degrees->radians p1)
+         [lat2 long2] (degrees->radians p2)]
+     (* (* radius
+           (Math/acos (+ (* (Math/sin lat1) (Math/sin lat2))
+                         (* (Math/cos lat1)
+                            (Math/cos lat2)
+                            (Math/cos (- long1 long2))))))
+        1000))))
+
+#_(distance-between (nth latlngset 0) (nth latlngset 2))
+#_(distance-between (nth latlngset 1) (nth latlngset 3))
+#_(distance-between (nth latlngset 1) (nth latlngset 2))
 

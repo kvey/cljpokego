@@ -1,5 +1,6 @@
 (ns cljpokego.concurrency
   (:require
+   [throttler.core :refer [throttle-chan throttle-fn]]
    [clojure.core.async :as a :refer
     [>! <! <!! go go-loop chan to-chan alts!]]))
 
@@ -61,11 +62,12 @@
 
 (defn parallel-frame [max-threads input-data f stop-flag]
   (let [input (to-chan input-data)
+        input-throttled (throttle-chan input 5 :second)
         output (chan)
         result (sink output)
         thread-counts (atom [])]
     ;;(watch-counter counter thread-counts)
-    (<!! (pmax max-threads f input output stop-flag))
+    (<!! (pmax max-threads f input-throttled output stop-flag))
     ;; confirm max thread limit, vector should max at maxthread
     #_(println @thread-counts) 
     result))
