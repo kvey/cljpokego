@@ -1,0 +1,64 @@
+{
+  "name": "react-map-gl-heatmap-overlay",
+  "version": "1.1.2",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build-push-js": "browserify ./index.js -o ./dist.js ; cp ./dist.js ../resources/public/map.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "budo ./example/main.js -d ./example/ --live --host 127.0.0.1 --  | bistre",
+    "lint": "uber-standard",
+    "precommit": "npm run lint -s",
+    "prepush": "npm run lint -s"
+  },
+  "keywords": [
+    "react",
+    "mapbox",
+    "mapbox-gl",
+    "react-map-gl",
+    "map-gl",
+    "overlay",
+    "heatmap"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vicapow/react-map-gl-heatmap-overlay.git"
+  },
+  "author": "Victor Powell",
+  "license": "MIT",
+  "peerDependencies": {
+    "immutable": "^3.7.5",
+    "r-dom": "^2.0.0",
+    "react": "0.14.x - 15.x",
+    "react-dom": "0.14.x - 15.x"
+  },
+  "dependencies": {
+    "d3": "3.5.17",
+    "example-cities": "0.0.0",
+    "global": "^4.3.0",
+    "object-assign": "^4.0.1",
+    "react-map-gl": "^0.6.9",
+    "scale-color-perceptual": "^1.1.2",
+    "viewport-mercator-project": "^2.0.1",
+    "webgl-heatmap": "^0.2.0"
+  },
+  "devDependencies": {
+    "bistre": "^1.0.1",
+    "babel-cli": "^6.7.0",
+    "babel-core": "^6.7.0",
+    "babel-eslint": "^5.0.0",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-preset-es2015": "^6.6.0",
+    "babel-preset-react": "^6.5.0",
+    "babel-preset-stage-2": "^6.5.0",
+    "babelify": "^7.2.0",
+    "budo": "^6.0.1",
+    "immutable": "^3.7.5",
+    "r-dom": "^2.1.0",
+    "raster-tile-style": "^1.0.1",
+    "react": "^0.14.3",
+    "react-dom": "^0.14.3",
+    "react-map-gl": "^0.6.0",
+    "uber-standard": "^5.1.0"
+  }
+}
